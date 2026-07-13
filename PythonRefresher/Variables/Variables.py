@@ -7,6 +7,9 @@ print(first_name)
 first_name = "Melissa"
 print(first_name)
 
+middle_name = "Bob"
+print(middle_name)
+
 
 
 
