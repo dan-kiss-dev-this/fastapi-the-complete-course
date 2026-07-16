@@ -11,9 +11,13 @@ import models
 from models import Todos
 from database import engine, SessionLocal
 
+from routers import auth
+
 app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
+
+app.include_router(auth.router)
 
 def get_db():
     # so connect to db and close db connection after response delivered, open db connection only when using database and close after
@@ -85,7 +89,7 @@ if __name__ == "__main__":
 # from fastapi import FastAPI
 # import models
 # from database import engine
-# from routers import auth, todos, admin, users
+# from routers_old import auth, todos, admin, users
 #
 # app = FastAPI()
 #
