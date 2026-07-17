@@ -1,5 +1,11 @@
-from fastapi import FastAPI, APIRouter
+from typing import Annotated
+
+from fastapi import FastAPI, APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from starlette import status
+
+from database import SessionLocal
 from models import Users
 from passlib.context import CryptContext
 
@@ -7,6 +13,7 @@ from passlib.context import CryptContext
 router = APIRouter()
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+
 
 #pydantics class does field validation, leave id and is_active out
 class CreateUserRequest(BaseModel):
@@ -17,9 +24,21 @@ class CreateUserRequest(BaseModel):
     password: str
     role: str
 
+
+def get_db():
+    # so connect to db and close db connection after response delivered, open db connection only when using database and close after
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+db_dependency = Annotated[Session, Depends(get_db)]
+
+
 # note below need to write out for the hashed password setup
-@router.post("/auth")
-async def create_user(create_user_request: CreateUserRequest):
+@router.post("/auth", status_code=status.HTTP_201_CREATED)
+async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
     create_user_model = Users(
         email=create_user_request.email,
         username=create_user_request.username,
@@ -31,4 +50,5 @@ async def create_user(create_user_request: CreateUserRequest):
         is_active=True
     )
 
-    return create_user_model
+    db.add(create_user_model)
+    db.commit()
