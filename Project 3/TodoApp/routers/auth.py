@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
 
-from fastapi import FastAPI, APIRouter, Depends
+from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette import status
@@ -9,9 +9,8 @@ from starlette import status
 from database import SessionLocal
 from models import Users
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordRequestForm
-from jose import jwt
-
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import jwt, JWTError
 
 router = APIRouter()
 
@@ -19,7 +18,7 @@ SECRET_KEY = 'testpassword'
 ALGORITHM = 'HS256'
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-
+oath2_bearer = OAuth2PasswordBearer(tokenUrl='token')
 
 #pydantics class does field validation, leave id and is_active out
 class CreateUserRequest(BaseModel):
@@ -60,15 +59,16 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     encode.update({'exp': expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# sample response not used 2
-def create_access_token21(username: str, user_id: int, expires_delta: timedelta):
-    token = jwt.encode({'username': username, 'user_id': user_id, 'expires_delta': expires_delta}, SECRET_KEY, algorithm=ALGORITHM)
-    return jwt
-
-#sample response not used 1
-def create_access_token20(data: dict, secret: str, algo: str):
-    token = jwt.encode({'user': data.get("user")}, secret, algorithm=algo)
-    return jwt
+async def get_current_user(token: Annotated[str, Depends(oath2_bearer)], db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get('sub')
+        user_id: int = payload.get('id')
+        if username is None or user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='Could not validate credentials')
+        return {'username': username, 'id': user_id}
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')
 
 
 
