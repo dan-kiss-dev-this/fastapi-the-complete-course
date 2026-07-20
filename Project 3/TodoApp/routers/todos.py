@@ -40,8 +40,11 @@ class TodoRequest(BaseModel):
 
 # note Depends below is dependency injection
 @router.get("/")
-async def read_all(db: db_dependency):
-    return db.query(Todos).all()
+async def read_all(user: user_dependency, db: db_dependency):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+
+    return db.query(Todos).filter(Todos.owner_id == user.get('id')).all()
 
 @router.get("/todo/{todo_id}")
 async def read_todo(db: db_dependency, todo_id: int = Path(gt=0)):
@@ -62,8 +65,11 @@ async def create_todo(user: user_dependency, db: db_dependency, todo_request: To
     db.commit()
 
 @router.put("/todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_todo(db: db_dependency, todo_request: TodoRequest, todo_id: int =Path(gt=0)):
-    todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
+async def update_todo(user: user_dependency, db: db_dependency, todo_request: TodoRequest, todo_id: int =Path(gt=0)):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+    todo_model = db.query(Todos).filter(Todos.id == todo_id).\
+        filter(Todos.owner_id == user.get('id')).first()
     if todo_model is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
     todo_model.title = todo_request.title
