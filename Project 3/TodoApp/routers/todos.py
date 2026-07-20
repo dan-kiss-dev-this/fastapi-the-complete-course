@@ -10,6 +10,8 @@ from starlette import status
 from models import Todos
 from database import engine, SessionLocal
 
+from routers.auth import get_current_user
+
 # from routers import auth
 
 router = APIRouter()
@@ -27,6 +29,7 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # make pydantics request
 class TodoRequest(BaseModel):
@@ -48,8 +51,11 @@ async def read_todo(db: db_dependency, todo_id: int = Path(gt=0)):
     raise(HTTPException(status_code=404, detail="Todo not found"))
 
 @router.post("/todo", status_code=status.HTTP_201_CREATED)
-async def create_todo(db: db_dependency, todo_request: TodoRequest):
-    todo_model=Todos(**todo_request.model_dump())
+async def create_todo(user: user_dependency, db: db_dependency, todo_request: TodoRequest):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+    #note we add the owner_id as the model for Todos includes it, without this we raise the exception and cannot post the todo
+    todo_model=Todos(**todo_request.model_dump(), owner_id=user.get('id'))
     # get db ready
     db.add(todo_model)
     # flushing and commit transaction to database
@@ -78,10 +84,10 @@ async def delete_todo(db: db_dependency, todo_id: int = Path(gt=0)):
     db.commit()
 
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# if __name__ == "__main__":
+#     import uvicorn
+#
+#     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
 
 
