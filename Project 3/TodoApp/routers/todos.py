@@ -56,7 +56,7 @@ async def create_todo(user: user_dependency, db: db_dependency, todo_request: To
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
     #note we add the owner_id as the model for Todos includes it, without this we raise the exception and cannot post the todo
     todo_model=Todos(**todo_request.model_dump(), owner_id=user.get('id'))
-    # get db ready
+    # get db ready here
     db.add(todo_model)
     # flushing and commit transaction to database
     db.commit()
