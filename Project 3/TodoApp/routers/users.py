@@ -12,6 +12,8 @@ from database import engine, SessionLocal
 
 from routers.auth import get_current_user
 
+from .auth import bcrypt_context
+
 # from routers import auth
 
 router = APIRouter(
@@ -36,4 +38,23 @@ async def get_user(user: user_dependency, db: db_dependency):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
 
     return db.query(Users).filter(Users.id == user.get('id')).first()
+
+@router.post('/password', status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(user: user_dependency, db: db_dependency, updated_password: str):
+    # check if password is good
+    # if user does not exist raise error
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    user_model = db.query(Users).filter(Users.id == user.get('id')).first()
+    if Users is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    # todo_model = db.query(Todos).filter(Todos.id == todo_id).\
+    #         filter(Todos.owner_id == user.get('id')).first()
+    user_model.hashed_password = bcrypt_context.hash(updated_password)
+    db.add(user_model)
+    db.commit()
+
+#     todo_model = db.query(Todos).filter(Todos.id == todo_id).\
+#         filter(Todos.owner_id == user.get('id')).first()
+
 
