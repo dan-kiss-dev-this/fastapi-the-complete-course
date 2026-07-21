@@ -12,7 +12,7 @@ from database import SessionLocal
 
 from routers.auth import get_current_user, authenticate_user
 
-from .auth import bcrypt_context
+from passlib.context import CryptContext
 
 # from routers import auth
 
@@ -35,6 +35,7 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
+bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 @router.get('/')
 async def get_user(user: user_dependency, db: db_dependency):
