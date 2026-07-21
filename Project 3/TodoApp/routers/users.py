@@ -49,6 +49,7 @@ async def change_password(user: user_dependency, db: db_dependency, update_user:
     # if user does not exist raise error
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
     user_model = db.query(Users).filter(Users.id == user.get('id')).first()
 
 
